@@ -1,0 +1,6 @@
+{
+  "name": "Classroom Relationship Analysis",
+  "description": "구글 설문 응답 기반 사회연결망 분석(SNA), 교우관계 시각화, Gephi 파일 생성, 시기별 관계 변화 탐지 및 Gemini AI 맞춤 조언 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
