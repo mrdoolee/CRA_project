@@ -20,7 +20,7 @@ export const SystemInfoModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h3 className="text-base font-bold flex items-center gap-2">
-                CRA (Classroom Relationship Analysis) 시스템 안내
+                CRA (Classroom Relationship Analysis) 안내
               </h3>
               <p className="text-xs text-slate-300">버전 v1.0 (2026.07)</p>
             </div>

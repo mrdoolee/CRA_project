@@ -76,25 +76,15 @@ export const DataManagementTab: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Quick Sample Loader */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Users className="w-6 h-6 text-indigo-300" />
-            설문 데이터 및 학급 명렬표 등록
-          </h2>
-          <p className="text-sm text-indigo-200 mt-1">
-            구글 설문지 응답 엑셀/CSV 파일과 학급 명렬표를 업로드하면 자동으로 사회연결망 분석이 수행됩니다.
-          </p>
-        </div>
-
-        <button
-          onClick={onLoadSampleData}
-          className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 font-semibold text-slate-900 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm"
-        >
-          <Sparkles className="w-4 h-4" />
-          샘플 데이터로 바로 시작하기 (25명)
-        </button>
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 rounded-2xl shadow-md">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Users className="w-6 h-6 text-indigo-300" />
+          설문 데이터 및 학급 명렬표 등록
+        </h2>
+        <p className="text-sm text-indigo-200 mt-1">
+          구글 설문지 응답 엑셀/CSV 파일과 학급 명렬표를 업로드하면 자동으로 사회연결망 분석이 수행됩니다.
+        </p>
       </div>
 
       {/* JSON Backup Restoration Box */}

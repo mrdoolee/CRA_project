@@ -367,12 +367,14 @@ function calculateBetweennessCentrality(
   const cb = new Map<string, number>();
   nodes.forEach((n) => cb.set(n, 0));
 
-  // Build adjacency list
+  // Build adjacency list (directed edges without duplicate target pushes)
   const adj = new Map<string, string[]>();
   nodes.forEach((n) => adj.set(n, []));
   edgeWeightMap.forEach((_, key) => {
     const [u, v] = key.split("->");
-    adj.get(u)?.push(v);
+    if (!adj.get(u)?.includes(v)) {
+      adj.get(u)?.push(v);
+    }
   });
 
   // Brandes algorithm
@@ -399,13 +401,13 @@ function calculateBetweennessCentrality(
 
       const neighbors = adj.get(v) || [];
       neighbors.forEach((w) => {
-        // Path discovery
+        // Path discovery vs Path counting
         if (d.get(w)! < 0) {
           Q.push(w);
           d.set(w, d.get(v)! + 1);
-        }
-        // Path counting
-        if (d.get(w)! === d.get(v)! + 1) {
+          sigma.set(w, sigma.get(v)!);
+          P.get(w)!.push(v);
+        } else if (d.get(w)! === d.get(v)! + 1) {
           sigma.set(w, sigma.get(w)! + sigma.get(v)!);
           P.get(w)!.push(v);
         }
@@ -428,79 +430,129 @@ function calculateBetweennessCentrality(
     }
   });
 
-  // Normalize by (N-1)(N-2)
+  // Normalize by (N-1)(N-2) for directed graph
   const N = nodes.length;
   const normFactor = N > 2 ? (N - 1) * (N - 2) : 1;
   const normalizedCb = new Map<string, number>();
   cb.forEach((val, name) => {
-    normalizedCb.set(name, Math.min(1.0, val / normFactor));
+    const normVal = val / normFactor;
+    normalizedCb.set(name, Math.round(normVal * 1000) / 1000);
   });
 
   return normalizedCb;
 }
 
 /**
- * Community / Subgroup Detection using Greedy Modularity Optimization
+ * Community / Subgroup Detection using Weighted Louvain / Greedy Modularity Optimization
+ * (Removes artificial size splitting and detects natural subgroup boundaries based on link density)
  */
 function detectCommunities(
   nodes: string[],
   edgeWeightMap: Map<string, { weight: number }>
 ): { communityMap: Map<string, string>; communityList: CommunityInfo[] } {
-  // Simple BFS / Connected Component & Modularity clustering hybrid
-  const adjUndirected = new Map<string, Set<string>>();
-  nodes.forEach((n) => adjUndirected.set(n, new Set()));
+  // Build undirected weighted adjacency matrix
+  const weights = new Map<string, number>();
+  const nodeDegrees = new Map<string, number>();
+  nodes.forEach((n) => nodeDegrees.set(n, 0));
 
-  edgeWeightMap.forEach((_, key) => {
+  let totalM = 0;
+  edgeWeightMap.forEach(({ weight }, key) => {
     const [u, v] = key.split("->");
-    adjUndirected.get(u)?.add(v);
-    adjUndirected.get(v)?.add(u);
+    if (u === v) return;
+    const undirKey = u < v ? `${u}<->${v}` : `${v}<->${u}`;
+    const curr = weights.get(undirKey) || 0;
+    weights.set(undirKey, curr + weight);
   });
 
-  const visited = new Set<string>();
-  const rawClusters: string[][] = [];
+  weights.forEach((w, key) => {
+    const [u, v] = key.split("<->");
+    nodeDegrees.set(u, (nodeDegrees.get(u) || 0) + w);
+    nodeDegrees.set(v, (nodeDegrees.get(v) || 0) + w);
+    totalM += w;
+  });
 
+  // Adjacency map for quick neighbor weight lookup
+  const adj = new Map<string, Map<string, number>>();
+  nodes.forEach((n) => adj.set(n, new Map()));
+  weights.forEach((w, key) => {
+    const [u, v] = key.split("<->");
+    adj.get(u)?.set(v, w);
+    adj.get(v)?.set(u, w);
+  });
+
+  // Initial assignment: each node in its own community
+  const communityAssignment = new Map<string, number>();
+  nodes.forEach((n, idx) => communityAssignment.set(n, idx));
+
+  if (totalM > 0) {
+    let improvement = true;
+    let pass = 0;
+
+    while (improvement && pass < 50) {
+      improvement = false;
+      pass++;
+
+      const sortedNodes = [...nodes].sort();
+
+      for (const node of sortedNodes) {
+        const currentComm = communityAssignment.get(node)!;
+        const ki = nodeDegrees.get(node) || 0;
+        if (ki === 0) continue;
+
+        const neighborComms = new Set<number>();
+        const nodeNeighbors = adj.get(node) || new Map();
+        nodeNeighbors.forEach((_, nbr) => {
+          neighborComms.add(communityAssignment.get(nbr)!);
+        });
+        neighborComms.add(currentComm);
+
+        let bestComm = currentComm;
+        let maxDeltaQ = 0;
+
+        neighborComms.forEach((candidateComm) => {
+          let kiIn = 0;
+          let sigmaTot = 0;
+
+          nodes.forEach((otherNode) => {
+            if (communityAssignment.get(otherNode) === candidateComm) {
+              sigmaTot += nodeDegrees.get(otherNode) || 0;
+              if (otherNode !== node && nodeNeighbors.has(otherNode)) {
+                kiIn += nodeNeighbors.get(otherNode)!;
+              }
+            }
+          });
+
+          if (candidateComm === currentComm) {
+            sigmaTot -= ki;
+          }
+
+          const deltaQ = kiIn / totalM - (sigmaTot * ki) / (2 * totalM * totalM);
+
+          if (deltaQ > maxDeltaQ + 1e-8) {
+            maxDeltaQ = deltaQ;
+            bestComm = candidateComm;
+          }
+        });
+
+        if (bestComm !== currentComm) {
+          communityAssignment.set(node, bestComm);
+          improvement = true;
+        }
+      }
+    }
+  }
+
+  // Group nodes by assigned community
+  const commGroups = new Map<number, string[]>();
   nodes.forEach((node) => {
-    if (visited.has(node)) return;
-    const cluster: string[] = [];
-    const queue = [node];
-    visited.add(node);
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      cluster.push(current);
-
-      const neighbors = adjUndirected.get(current) || new Set();
-      neighbors.forEach((nbr) => {
-        if (!visited.has(nbr)) {
-          visited.add(nbr);
-          queue.push(nbr);
-        }
-      });
-    }
-    rawClusters.push(cluster);
+    const cId = communityAssignment.get(node)!;
+    if (!commGroups.has(cId)) commGroups.set(cId, []);
+    commGroups.get(cId)!.push(node);
   });
 
-  // If there's a big component, split it into subgroups of size 4-7 based on connection density
-  const finalClusters: string[][] = [];
-
-  rawClusters.forEach((cluster) => {
-    if (cluster.length <= 8) {
-      finalClusters.push(cluster);
-    } else {
-      // Split large component into smaller subgroups
-      let sub: string[] = [];
-      cluster.forEach((member, i) => {
-        sub.push(member);
-        if (sub.length >= 6 || i === cluster.length - 1) {
-          finalClusters.push([...sub]);
-          sub = [];
-        }
-      });
-    }
-  });
-
-  // Sort clusters by size descending
-  finalClusters.sort((a, b) => b.length - a.length);
+  const finalClusters = Array.from(commGroups.values());
+  // Sort clusters by size descending, then by first member name
+  finalClusters.sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]));
 
   const communityMap = new Map<string, string>();
   const communityList: CommunityInfo[] = [];

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { DomainAnalysisResult, StudentMetrics } from "../types/sna";
+import { Student, DomainAnalysisResult, StudentMetrics } from "../types/sna";
 import { NetworkGraph } from "./NetworkGraph";
 import {
   Users,
@@ -15,13 +15,21 @@ import {
   ExternalLink,
   HelpCircle,
   Info,
+  Download,
+  FileSpreadsheet,
+  FolderDown,
 } from "lucide-react";
 import { getAnonymizedName } from "../utils/anonymizer";
+import { exportExcelReport } from "../utils/excelExporter";
+import { exportSnaToHtmlReport } from "../utils/htmlExporter";
 
 interface Props {
   analysisResults: Record<string, DomainAnalysisResult>;
   onSelectStudentForAi: (studentName: string) => void;
   isAnonymous?: boolean;
+  students?: Student[];
+  classNameTitle?: string;
+  onDownloadLocalBackup?: () => void;
 }
 
 type ModalCategory = "total" | "mutual" | "isolated" | "popular" | "bridge" | null;
@@ -30,6 +38,9 @@ export const SnaDashboardTab: React.FC<Props> = ({
   analysisResults,
   onSelectStudentForAi,
   isAnonymous = false,
+  students = [],
+  classNameTitle = "학급",
+  onDownloadLocalBackup,
 }) => {
   const [activeDomainKey, setActiveDomainKey] = useState<string>("0_전체_통합");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -54,7 +65,20 @@ export const SnaDashboardTab: React.FC<Props> = ({
   }
 
   const allNames = currentResult.nodes.map((n) => n.id);
-  const displayName = (name: string) => getAnonymizedName(name, allNames, isAnonymous);
+  const displayName = (name: string) => {
+    if (!name) return "";
+    if (isAnonymous) {
+      const metric = currentResult.metrics[name];
+      if (metric && metric.studentCode) {
+        return `코드 ${metric.studentCode}`;
+      }
+      const nodeObj = currentResult.nodes.find((n) => n.id === name);
+      if (nodeObj && (nodeObj as any).code) {
+        return `코드 ${(nodeObj as any).code}`;
+      }
+    }
+    return getAnonymizedName(name, Object.values(currentResult.metrics), isAnonymous);
+  };
 
   // Filter student table
   let studentMetricsList = Object.values(currentResult.metrics) as StudentMetrics[];
@@ -159,6 +183,44 @@ export const SnaDashboardTab: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
+      {/* Top Action Bar for Menu 3 (Report & Backup Downloads) */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-slate-800 text-xs font-bold">
+          <Sparkles className="w-4 h-4 text-indigo-600" />
+          <span>관계망 분석(Sociogram) 보고서 및 백업 저장</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {onDownloadLocalBackup && (
+            <button
+              onClick={onDownloadLocalBackup}
+              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+              title="현재 설문 및 학생 데이터를 .json 파일로 저장합니다."
+            >
+              <FolderDown className="w-3.5 h-3.5 text-indigo-300" />
+              JSON 백업 저장
+            </button>
+          )}
+
+          <button
+            onClick={() => exportExcelReport(analysisResults, "CRA_Sociogram_통합보고서.xlsx")}
+            className="px-3.5 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-900 hover:bg-emerald-100 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+            title="5개 영역 전체 분석 결과를 XLSX 엑셀 보고서로 저장합니다."
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            XLSX 보고서 저장
+          </button>
+
+          <button
+            onClick={() => exportSnaToHtmlReport(students, analysisResults, classNameTitle)}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+            title="웹 브라우저에서 독립 실행 가능한 인터랙티브 HTML 보고서를 저장합니다."
+          >
+            <Download className="w-3.5 h-3.5" />
+            HTML 보고서 저장
+          </button>
+        </div>
+      </div>
+
       {/* Domain Selection Tabs */}
       <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
         {domainPills.map((pill) => (

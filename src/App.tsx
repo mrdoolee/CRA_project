@@ -58,9 +58,12 @@ export default function App() {
   const [teacherName, setTeacherName] = useState<string>("담임교사");
   const [waveTitle, setWaveTitle] = useState<string>("1차 조사 (1학기 초 3월)");
 
-  // State for students and responses
-  const [students, setStudents] = useState<Student[]>(SAMPLE_STUDENTS);
-  const [responses, setResponses] = useState<SurveyResponse[]>(SAMPLE_RESPONSES_WAVE1);
+  // State for students and responses (처음 접속 시 빈 데이터 상태)
+  const [students, setStudents] = useState<Student[]>([]);
+  const [responses, setResponses] = useState<SurveyResponse[]>([]);
+
+  // Check if survey response data is loaded
+  const hasData = responses.length > 0;
 
   // Selected student for direct jump to AI Counseling
   const [selectedStudentForAi, setSelectedStudentForAi] = useState<string | null>(null);
@@ -91,6 +94,7 @@ export default function App() {
     setResponses(SAMPLE_RESPONSES_WAVE1);
     setClassNameTitle("3학년 2반");
     setWaveTitle("1차 조사 (1학기 초 3월)");
+    setActiveTab("dashboard");
   };
 
   // Local Backup Download Handler (.json)
@@ -164,12 +168,14 @@ export default function App() {
               <Network className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-white font-extrabold text-xs uppercase tracking-wider leading-tight">
-                Classroom<br />
-                <span className="text-indigo-400 text-sm">Relationship</span><br />
-                Analysis
+              <h1 className="text-white font-extrabold text-xs tracking-tight leading-snug">
+                학급 교우관계 분석 도우미
               </h1>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-medium">SNA & Gemini AI Platform</p>
+              <p className="text-[12px] text-indigo-400 font-bold mt-1 leading-tight tracking-wide">
+                Classroom<br />
+                Relationship<br />
+                Analysis
+              </p>
             </div>
           </div>
         </div>
@@ -200,7 +206,7 @@ export default function App() {
             className={`w-full flex items-center px-3 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === "import"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
             }`}
           >
             <Upload className="w-4 h-4 mr-2.5 text-indigo-400 flex-shrink-0" />
@@ -209,65 +215,119 @@ export default function App() {
 
           {/* 3. 관계망 분석 (Network Dashboard) */}
           <button
-            onClick={() => setActiveTab("dashboard")}
-            className={`w-full flex items-center px-3 py-3 rounded-xl text-xs font-bold transition-all ${
+            onClick={() => {
+              if (!hasData) {
+                alert("분석할 설문 응답 데이터가 없습니다.\n1번 메뉴에서 [샘플 데이터로 바로 시작하기]를 클릭하시거나,\n2번 메뉴에서 구글 설문 응답(CSV/엑셀)을 등록해 주세요.");
+                return;
+              }
+              setActiveTab("dashboard");
+            }}
+            className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === "dashboard"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200"
+                : hasData
+                ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
             }`}
           >
-            <Network className="w-4 h-4 mr-2.5 flex-shrink-0" />
-            <span className="truncate">3. 관계망 분석 (Sociogram)</span>
+            <div className="flex items-center min-w-0">
+              <Network className="w-4 h-4 mr-2.5 flex-shrink-0 text-indigo-400" />
+              <span className="truncate">3. 관계망 분석 (Sociogram)</span>
+            </div>
+            {!hasData && (
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
+                데이터 필요
+              </span>
+            )}
           </button>
 
           {/* 4. AI 맞춤 상담 조언 */}
           <button
-            onClick={() => setActiveTab("counseling")}
+            onClick={() => {
+              if (!hasData) {
+                alert("분석할 설문 응답 데이터가 없습니다.\n1번 메뉴에서 [샘플 데이터로 바로 시작하기]를 클릭하시거나,\n2번 메뉴에서 구글 설문 응답(CSV/엑셀)을 등록해 주세요.");
+                return;
+              }
+              setActiveTab("counseling");
+            }}
             className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === "counseling"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200"
+                : hasData
+                ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
             }`}
           >
             <div className="flex items-center min-w-0">
               <Sparkles className="w-4 h-4 mr-2.5 text-amber-400 flex-shrink-0" />
               <span className="truncate">4. AI 맞춤 상담 조언</span>
             </div>
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold flex-shrink-0 ml-1">
-              AI
-            </span>
+            {hasData ? (
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold flex-shrink-0 ml-1">
+                AI
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
+                데이터 필요
+              </span>
+            )}
           </button>
 
           {/* 5. 누적 관계 변화 (History) */}
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => {
+              if (!hasData) {
+                alert("분석할 설문 응답 데이터가 없습니다.\n1번 메뉴에서 [샘플 데이터로 바로 시작하기]를 클릭하시거나,\n2번 메뉴에서 구글 설문 응답(CSV/엑셀)을 등록해 주세요.");
+                return;
+              }
+              setActiveTab("history");
+            }}
             className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === "history"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200"
+                : hasData
+                ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
             }`}
           >
             <div className="flex items-center min-w-0">
               <GitCompare className="w-4 h-4 mr-2.5 text-indigo-400 flex-shrink-0" />
               <span className="truncate">5. 누적 관계 변화 (History)</span>
             </div>
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold flex-shrink-0 ml-1">
-              AI
-            </span>
+            {!hasData && (
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
+                데이터 필요
+              </span>
+            )}
           </button>
 
           {/* 6. Gephi / 보고서 / 백업 데이터 */}
           <button
-            onClick={() => setActiveTab("gephi")}
-            className={`w-full flex items-center px-3 py-3 rounded-xl text-xs font-bold transition-all ${
+            onClick={() => {
+              if (!hasData) {
+                alert("분석할 설문 응답 데이터가 없습니다.\n1번 메뉴에서 [샘플 데이터로 바로 시작하기]를 클릭하시거나,\n2번 메뉴에서 구글 설문 응답(CSV/엑셀)을 등록해 주세요.");
+                return;
+              }
+              setActiveTab("gephi");
+            }}
+            className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === "gephi"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-200"
+                : hasData
+                ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
             }`}
             title="6. Gephi / 보고서 / 백업 데이터 저장"
           >
-            <FileCode className="w-4 h-4 mr-2.5 flex-shrink-0" />
-            <span className="truncate">6. Gephi / 보고서 / 백업 데이터</span>
+            <div className="flex items-center min-w-0">
+              <FileCode className="w-4 h-4 mr-2.5 flex-shrink-0" />
+              <span className="truncate">6. Gephi / 보고서 / 백업</span>
+            </div>
+            {!hasData && (
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
+                데이터 필요
+              </span>
+            )}
           </button>
         </nav>
 
@@ -327,19 +387,9 @@ export default function App() {
             </span>
           </div>
 
-          {/* Action buttons visible only on Menu 3 (관계망 분석) */}
-          {activeTab === "dashboard" && (
+          {/* Action buttons visible on Menu 3~6 */}
+          {["dashboard", "counseling", "history", "gephi"].includes(activeTab) && (
             <div className="flex items-center space-x-3">
-              {/* Local Backup Download Button */}
-              <button
-                onClick={handleDownloadLocalBackup}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
-                title="현재 학생 및 설문 응답 데이터를 .json 파일로 저장합니다."
-              >
-                <Download className="w-3.5 h-3.5 text-indigo-300" />
-                로컬 백업(.json) 저장
-              </button>
-
               {/* Student Name Anonymization Toggle */}
               <button
                 onClick={() => setIsAnonymous(!isAnonymous)}
@@ -348,7 +398,7 @@ export default function App() {
                     ? "bg-amber-500 text-slate-950 border-amber-400 font-extrabold"
                     : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
                 }`}
-                title="상담/화면 공유 시 학생 이름을 익명(학생 01, 학생 02)으로 전환합니다."
+                title="상담/화면 공유 시 학생 이름을 익명(코드 1701, 코드 1702)으로 전환합니다."
               >
                 {isAnonymous ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 {isAnonymous ? "🔒 익명화 ON" : "🔓 실명 표시"}
@@ -358,26 +408,10 @@ export default function App() {
               <button
                 onClick={() => downloadAnonymizationMappingCsv(students, classNameTitle)}
                 className="px-3.5 py-1.5 bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
-                title="실제 학생 이름과 익명화 코드(학생 01, 학생 02) 간의 대조 매핑표를 CSV로 다운로드합니다."
+                title="실제 학생 이름과 부여된 개인코드 간의 대조 매핑표를 CSV로 다운로드합니다."
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700" />
-                익명화 명단(.csv)
-              </button>
-
-              <button
-                onClick={() => exportExcelReport(analysisResults, "CRA_Sociogram_통합보고서.xlsx")}
-                className="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center gap-1.5 transition-colors"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                XLSX 보고서
-              </button>
-
-              <button
-                onClick={() => exportSnaToHtmlReport(students, analysisResults, classNameTitle)}
-                className="px-3.5 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-sm flex items-center gap-1.5 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                HTML 보고서
+                익명화명단
               </button>
             </div>
           )}
@@ -386,7 +420,10 @@ export default function App() {
         {/* Tab Body View */}
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === "script" && (
-            <GoogleScriptGeneratorTab classNameTitle={classNameTitle} />
+            <GoogleScriptGeneratorTab
+              classNameTitle={classNameTitle}
+              onLoadSampleData={handleLoadSampleData}
+            />
           )}
 
           {activeTab === "import" && (
@@ -406,15 +443,64 @@ export default function App() {
             />
           )}
 
-          {activeTab === "dashboard" && (
+          {!hasData && activeTab !== "script" && activeTab !== "import" && (
+            <div className="max-w-2xl mx-auto my-12 p-8 bg-white border border-slate-200 rounded-3xl shadow-sm text-center space-y-6">
+              <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto border border-amber-200 shadow-sm">
+                <Network className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">
+                  분석할 설문 응답 데이터가 없습니다
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
+                  선생님, 사회연결망(Sociogram) 시각화 및 AI 맞춤 조언을 확인하려면 먼저 설문 응답 데이터를 등록하셔야 합니다.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-2 text-left">
+                <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  어떻게 시작하면 되나요?
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-slate-600">
+                  <li><strong>샘플 데이터로 체험하기:</strong> 아래 버튼을 누르시면 25명 규모의 실제 학급 샘플 데이터로 모든 기능(관계망, AI 조언, 변화 분석)을 즉시 체험할 수 있습니다.</li>
+                  <li><strong>실제 학급 데이터 분석하기:</strong> 2번 메뉴에서 구글 설문 응답 결과(.csv / .xlsx)를 업로드해 주세요.</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={handleLoadSampleData}
+                  className="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-400 font-extrabold text-slate-950 text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  <span>샘플 데이터로 바로 시작하기 (25명)</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("import")}
+                  className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 font-bold text-white text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Upload className="w-4 h-4 text-indigo-200" />
+                  <span>2. 설문 데이터 업로드 메뉴로 이동</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {hasData && activeTab === "dashboard" && (
             <SnaDashboardTab
               analysisResults={analysisResults}
               onSelectStudentForAi={handleSelectStudentForAi}
               isAnonymous={isAnonymous}
+              students={students}
+              classNameTitle={classNameTitle}
+              onDownloadLocalBackup={handleDownloadLocalBackup}
             />
           )}
 
-          {activeTab === "counseling" && (
+          {hasData && activeTab === "counseling" && (
             <AiCounselingTab
               overallResult={overallDomain}
               selectedStudentName={selectedStudentForAi}
@@ -423,10 +509,11 @@ export default function App() {
               onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
               isAnonymous={isAnonymous}
               classNameTitle={classNameTitle}
+              students={students}
             />
           )}
 
-          {activeTab === "history" && (
+          {hasData && activeTab === "history" && (
             <LongitudinalTab
               currentWaveTitle={waveTitle}
               currentAnalysisResults={analysisResults}
@@ -435,10 +522,11 @@ export default function App() {
               isAnonymous={isAnonymous}
               classNameTitle={classNameTitle}
               onDownloadLocalBackup={handleDownloadLocalBackup}
+              students={students}
             />
           )}
 
-          {activeTab === "gephi" && (
+          {hasData && activeTab === "gephi" && (
             <GephiExportTab
               students={students}
               responses={responses}

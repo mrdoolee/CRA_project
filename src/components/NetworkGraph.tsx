@@ -39,7 +39,7 @@ export const NetworkGraph: React.FC<Props> = ({
         return `코드 ${nodeObj.metrics.studentCode}`;
       }
     }
-    return getAnonymizedName(id, allNames, isAnonymous);
+    return getAnonymizedName(id, data.metrics || data.nodes, isAnonymous);
   };
 
   useEffect(() => {

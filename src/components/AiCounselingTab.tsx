@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { DomainAnalysisResult, StudentMetrics } from "../types/sna";
-import { Sparkles, Bot, UserCheck, ShieldAlert, Award, FileText, Printer, Loader2, Key, CheckCircle2, AlertCircle, Download } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Student, DomainAnalysisResult, StudentMetrics } from "../types/sna";
+import { Sparkles, Bot, UserCheck, ShieldAlert, Award, FileText, Printer, Loader2, Key, CheckCircle2, AlertCircle, Download, ShieldCheck } from "lucide-react";
 import { getAnonymizedName } from "../utils/anonymizer";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onOpenApiKeyModal: () => void;
   isAnonymous?: boolean;
   classNameTitle?: string;
+  students?: Student[];
 }
 
 export const AiCounselingTab: React.FC<Props> = ({
@@ -21,6 +22,7 @@ export const AiCounselingTab: React.FC<Props> = ({
   onOpenApiKeyModal,
   isAnonymous = false,
   classNameTitle = "우리반",
+  students = [],
 }) => {
   const [classAiReport, setClassAiReport] = useState<string | null>(null);
   const [classAiLoading, setClassAiLoading] = useState(false);
@@ -28,11 +30,36 @@ export const AiCounselingTab: React.FC<Props> = ({
   const [studentAiReport, setStudentAiReport] = useState<string | null>(null);
   const [studentAiLoading, setStudentAiLoading] = useState(false);
 
-  const studentList = overallResult?.nodes.map((n) => n.id) || [];
+  const studentList = useMemo(() => {
+    if (students && students.length > 0) {
+      return students.map((s) => s.name);
+    }
+    return overallResult?.nodes.map((n) => n.id) || [];
+  }, [students, overallResult]);
+
   const currentStudentName = selectedStudentName || studentList[0] || "";
   const currentStudentMetrics = currentStudentName ? overallResult.metrics[currentStudentName] : null;
 
-  const displayName = (name: string) => getAnonymizedName(name, studentList, isAnonymous);
+  const displayName = (name: string) =>
+    getAnonymizedName(name, students.length > 0 ? students : overallResult?.metrics || overallResult?.nodes, isAnonymous);
+
+  // Strict Personal Code helper for AI payload (100% real name masking)
+  const getStrictPersonalCode = (realName: string): string => {
+    if (!realName) return "";
+    const studentObj = students?.find((s) => s.name === realName);
+    if (studentObj && studentObj.code) {
+      return `코드 ${studentObj.code}`;
+    }
+    const metric = overallResult?.metrics[realName];
+    if (metric && metric.studentCode) {
+      return `코드 ${metric.studentCode}`;
+    }
+    const nodeObj = overallResult?.nodes.find((n) => n.id === realName);
+    if (nodeObj && (nodeObj as any).code) {
+      return `코드 ${(nodeObj as any).code}`;
+    }
+    return getAnonymizedName(realName, students.length > 0 ? students : studentList, true);
+  };
 
   // PDF Report Save / Print Handler
   const handleDownloadPdf = (reportTitle: string, reportContent: string, subName?: string) => {
@@ -154,17 +181,23 @@ export const AiCounselingTab: React.FC<Props> = ({
 
       const metricsList = Object.values(overallResult.metrics) as StudentMetrics[];
 
+      // Convert ALL student names to personal codes
       const isolatedStudents = metricsList
         .filter((m) => m.isIsolated)
-        .map((m) => ({ name: displayName(m.studentName), score: m.weightedInScore }));
+        .map((m) => ({ name: getStrictPersonalCode(m.studentName), score: m.weightedInScore }));
 
       const popularStudents = metricsList
         .filter((m) => m.isPopular)
-        .map((m) => ({ name: displayName(m.studentName), score: m.weightedInScore }));
+        .map((m) => ({ name: getStrictPersonalCode(m.studentName), score: m.weightedInScore }));
 
       const bridgeStudents = metricsList
         .filter((m) => m.isBridge)
-        .map((m) => ({ name: displayName(m.studentName), score: m.betweennessScore }));
+        .map((m) => ({ name: getStrictPersonalCode(m.studentName), score: m.betweennessScore }));
+
+      const sanitizedCommunities = (overallResult.communities || []).map((comm) => ({
+        ...comm,
+        members: (comm.members || []).map((m) => getStrictPersonalCode(m)),
+      }));
 
       const response = await fetch("/api/ai/classroom-report", {
         method: "POST",
@@ -182,7 +215,7 @@ export const AiCounselingTab: React.FC<Props> = ({
           isolatedStudents,
           popularStudents,
           bridgeStudents,
-          communities: overallResult.communities,
+          communities: sanitizedCommunities,
           classSize: overallResult.nodes.length,
         }),
       });
@@ -208,6 +241,16 @@ export const AiCounselingTab: React.FC<Props> = ({
       const chosenByEdges = overallResult.edges.filter((e) => e.target === currentStudentName);
       const outgoingEdges = overallResult.edges.filter((e) => e.source === currentStudentName);
 
+      const sanitizedStudentCodeName = getStrictPersonalCode(currentStudentName);
+
+      const sanitizedMetrics = {
+        ...currentStudentMetrics,
+        studentName: sanitizedStudentCodeName,
+        mutualPartners: (currentStudentMetrics.mutualPartners || []).map((p) => getStrictPersonalCode(p)),
+        unreciprocatedOut: (currentStudentMetrics.unreciprocatedOut || []).map((p) => getStrictPersonalCode(p)),
+        unreciprocatedIn: (currentStudentMetrics.unreciprocatedIn || []).map((p) => getStrictPersonalCode(p)),
+      };
+
       const response = await fetch("/api/ai/student-advice", {
         method: "POST",
         headers: {
@@ -216,10 +259,10 @@ export const AiCounselingTab: React.FC<Props> = ({
         },
         body: JSON.stringify({
           userApiKey: apiKey,
-          studentName: displayName(currentStudentName),
-          metrics: currentStudentMetrics,
-          choices: outgoingEdges.map((e) => displayName(e.target as string)),
-          chosenBy: chosenByEdges.map((e) => displayName(e.source as string)),
+          studentName: sanitizedStudentCodeName,
+          metrics: sanitizedMetrics,
+          choices: outgoingEdges.map((e) => getStrictPersonalCode(e.target as string)),
+          chosenBy: chosenByEdges.map((e) => getStrictPersonalCode(e.source as string)),
           classContext: {
             avgScore: overallResult.avgWeightedScore,
             totalStudents: overallResult.nodes.length,
@@ -266,25 +309,49 @@ export const AiCounselingTab: React.FC<Props> = ({
         </div>
       </div>
 
-      {!apiKey && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2.5 font-medium">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <div>
-              <strong>AI 심층 분석을 이용하려면 Gemini API Key 등록이 필요합니다.</strong>
-              <p className="text-[11px] text-amber-800/90 mt-0.5">
-                선생님 개인의 구글 계정으로 무료 발급(1분 소요)받으신 키를 등록하여 쓰시게 됩니다. (서버 저장 없이 브라우저에만 저장)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onOpenApiKeyModal}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all shadow-sm flex items-center gap-1.5"
-          >
-            <Key className="w-4 h-4" /> Gemini API Key 무료 등록하기
-          </button>
+      {/* Privacy & Personal Code Transmission Info Box */}
+      <div className="p-5 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 shadow-md space-y-3">
+        <div className="flex items-center gap-2 font-bold text-indigo-400 text-sm">
+          <ShieldCheck className="w-5 h-5 text-indigo-400" />
+          <span>개인 고유코드(가명) 처리 및 AI 전송 보안 안내</span>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300">
+          <div className="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/60 space-y-1">
+            <div className="font-bold text-white flex items-center gap-1.5">
+              <span>🔒 1. 설문 단계 가명 수집</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              CRA의 1단계(Google 설문 스크립트 도우미)에서 생성하는 설문지는 학생의 실제 이름 대신 <strong>개인 고유코드(예: 코드1234 등)</strong>로 응답을 수집합니다.
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/60 space-y-1">
+            <div className="font-bold text-white flex items-center gap-1.5">
+              <span>🛡️ 2. AI 전송 시 실명 완벽 차단</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Gemini AI에게 전달되는 프롬프트 역시 실제 성명이 아닌 100% 가명/학생 개인 코드 상태로 변환되어 전송됩니다.
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/60 space-y-1">
+            <div className="font-bold text-white flex items-center gap-1.5">
+              <span>✨ 3. 정보 유출 위험 없음</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              무료 API 키를 사용하더라도 구글 서버로는 "코드1234 학생이 코드5678 학생을 지명함" 수준의 기호화된 데이터만 넘어가므로, 실제 학생의 개인정보(실명) 유출 위험이 없습니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[11px] text-amber-200 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span>
+            <strong>주의:</strong> 만일 Gemini API로 정보가 넘어가기를 희망하지 않는 경우 해당 AI 분석을 사용하지 마세요.
+          </span>
+        </div>
+      </div>
 
       {/* Grid: 1. Class-wide Report & 2. Individual Student Report */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

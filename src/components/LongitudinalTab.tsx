@@ -14,6 +14,7 @@ interface Props {
   isAnonymous?: boolean;
   classNameTitle?: string;
   onDownloadLocalBackup?: () => void;
+  students?: Student[];
 }
 
 export const LongitudinalTab: React.FC<Props> = ({
@@ -24,6 +25,7 @@ export const LongitudinalTab: React.FC<Props> = ({
   isAnonymous = false,
   classNameTitle = "학급",
   onDownloadLocalBackup,
+  students = [],
 }) => {
   const [wave1Title, setWave1Title] = useState("이전 조사");
   const [wave2Title, setWave2Title] = useState(currentWaveTitle || "이번 조사");
@@ -37,7 +39,7 @@ export const LongitudinalTab: React.FC<Props> = ({
 
   // Compute Wave 1 mock sample data or custom uploaded wave 1
   const [wave1Data, setWave1Data] = useState<{ students: Student[]; responses: SurveyResponse[] }>({
-    students: SAMPLE_STUDENTS,
+    students: students.length > 0 ? students : SAMPLE_STUDENTS,
     responses: SAMPLE_RESPONSES_WAVE1,
   });
 
@@ -45,8 +47,8 @@ export const LongitudinalTab: React.FC<Props> = ({
   const wave1Overall = wave1Analysis["0_전체_통합"];
   const wave2Overall = currentAnalysisResults["0_전체_통합"] || wave1Overall;
 
-  const allNames = wave2Overall.nodes.map((n) => n.id);
-  const displayName = (name: string) => getAnonymizedName(name, allNames, isAnonymous);
+  const displayName = (name: string) =>
+    getAnonymizedName(name, students.length > 0 ? students : wave2Overall?.metrics || wave1Data.students, isAnonymous);
 
   // Calculate longitudinal comparison
   const comparison: LongitudinalComparison = calculateLongitudinalShift(
@@ -273,20 +275,6 @@ export const LongitudinalTab: React.FC<Props> = ({
             이전 조사와 이번 조사의 설문 응답을 비교하여 학생별 인기점수 변화, 고립 위험 해소/발생 여부를 정밀 분석합니다.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onOpenApiKeyModal}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-              apiKey
-                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30"
-                : "bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md animate-pulse"
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            {apiKey ? "🔑 API Key 설정됨" : "🔑 API Key 필요"}
-          </button>
-        </div>
       </div>
 
       {/* Roster Matching Notice Banner */}
@@ -406,63 +394,6 @@ export const LongitudinalTab: React.FC<Props> = ({
           </div>
           <span className="text-[11px] text-slate-400 mt-1 block">상호지목 및 연결밀도 종합</span>
         </div>
-      </div>
-
-      {/* AI Longitudinal Report Section */}
-      <div className="bg-white p-6 rounded-2xl border border-indigo-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Bot className="w-5 h-5 text-indigo-600" />
-              Gemini AI 시기별 교우관계 변화 심층 진단 리포트
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              [{wave1Title}] 대비 [{wave2Title}]의 교우관계 및 고립/응집력 변화 패턴을 AI가 다각도로 종합 진단합니다.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {aiReport && (
-              <button
-                onClick={handleDownloadPdf}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
-              >
-                <Download className="w-4 h-4" /> PDF 저장
-              </button>
-            )}
-
-            <button
-              onClick={handleGenerateLongitudinalAi}
-              disabled={loadingAi}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 text-xs disabled:opacity-50"
-            >
-              {loadingAi ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> AI 변화 추이 진단 중...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" /> AI 관계 변화 리포트 생성
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {aiReport ? (
-          <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs leading-relaxed text-slate-800 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
-            {aiReport}
-          </div>
-        ) : (
-          <div className="p-10 border-2 border-dashed border-indigo-100 bg-indigo-50/30 rounded-xl text-center text-slate-500 text-xs space-y-2">
-            <p className="font-semibold text-indigo-950">
-              상단의 시기별 데이터를 업로드 및 설정한 후, 우측 [AI 관계 변화 리포트 생성] 버튼을 클릭하세요.
-            </p>
-            <p className="text-slate-400 text-[11px]">
-              이전 조사 대비 신규 고립 발생 원인, 친밀도/응집력 상승 요인, 학급 지도 및 상담 제언 리포트가 구체적으로 자동 작성되며, 완성된 리포트는 PDF로 저장할 수 있습니다.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Student Shift Table */}

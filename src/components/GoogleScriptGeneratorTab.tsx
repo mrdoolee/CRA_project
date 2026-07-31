@@ -19,25 +19,28 @@ import {
 } from "lucide-react";
 import { downloadFile } from "../utils/gephiExporter";
 import { PrintCodeCardsModal } from "./PrintCodeCardsModal";
+import { SAMPLE_STUDENTS } from "../data/sampleData";
 
 interface Props {
   classNameTitle?: string;
+  onLoadSampleData?: () => void;
 }
 
 export const GoogleScriptGeneratorTab: React.FC<Props> = ({
   classNameTitle = "우리반",
+  onLoadSampleData,
 }) => {
   // Current Step state: 1 -> 2 -> 3 -> 4
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
-  // Step 1: Raw student names input
+  // Step 1: Raw student names input (샘플 학생 25명 기본값: 1701~1725)
   const [inputText, setInputText] = useState<string>(
-    `학생01\n학생02\n학생03\n학생04\n학생05\n학생06\n학생07\n학생08\n학생09\n학생10\n학생11\n학생12\n학생13\n학생14\n학생15\n학생16\n학생17\n학생18\n학생19\n학생20\n학생21\n학생22\n학생23\n학생24\n학생25\n학생26\n학생27\n학생28`
+    SAMPLE_STUDENTS.map((s) => s.name).join("\n")
   );
 
   // Step 3: Form Pre-Settings (Title & Section 1 Description)
   const [formTitle, setFormTitle] = useState<string>(
-    `나와 친구 이야기 (${classNameTitle})`
+    `나와 친구 이야기(우리반)`
   );
 
   const [section1Desc, setSection1Desc] = useState<string>(
@@ -51,7 +54,7 @@ export const GoogleScriptGeneratorTab: React.FC<Props> = ({
   const [codeSeed, setCodeSeed] = useState(0); // Trigger code re-generation if needed
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  // Parse student names and generate assigned 4-digit codes
+  // Parse student names and match assigned 4-digit codes
   const studentListWithCodes = useMemo(() => {
     const lines = inputText
       .split("\n")
@@ -59,12 +62,32 @@ export const GoogleScriptGeneratorTab: React.FC<Props> = ({
       .filter((s) => s.length > 0 && s !== "없음");
 
     const uniqueNames = Array.from(new Set(lines));
-    const usedCodes = new Set<string>();
 
-    return uniqueNames.map((name) => {
+    if (codeSeed === 0) {
+      return uniqueNames.map((name, idx) => {
+        const sampleMatch = SAMPLE_STUDENTS.find((s) => s.name === name);
+        if (sampleMatch) {
+          return { name, code: sampleMatch.code };
+        }
+        const code = String(1701 + idx);
+        return { name, code };
+      });
+    }
+
+    // When codeSeed > 0 (user clicks '코드 재할당'), generate new unique 4-digit random codes
+    const usedCodes = new Set<string>();
+    const pseudoRandom = (seed: number, index: number) => {
+      const x = Math.sin(seed * 9999 + index * 1234) * 10000;
+      return x - Math.floor(x);
+    };
+
+    return uniqueNames.map((name, idx) => {
       let code = "";
+      let attempt = 0;
       do {
-        code = String(Math.floor(Math.random() * 9000) + 1000);
+        const rand = pseudoRandom(codeSeed + attempt, idx);
+        code = String(Math.floor(rand * 8999) + 1000);
+        attempt++;
       } while (usedCodes.has(code));
       usedCodes.add(code);
       return { name, code };
@@ -323,14 +346,26 @@ ${formattedDescLines};
   return (
     <div className="space-y-8">
       {/* Top Banner Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800">
-        <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-          <Sparkles className="w-4 h-4" /> 1단계: Google 설문지 생성 스크립트 도우미
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
+            <Sparkles className="w-4 h-4" /> 1단계: Google 설문지 생성 스크립트 도우미
+          </div>
+          <h2 className="text-xl font-extrabold mt-1">단계별 Google 설문지 & 개인코드 자동 생성</h2>
+          <p className="text-xs text-slate-300 mt-1">
+            각 단계별로 [확인] 버튼을 누르면 <strong>학생 코드 매칭</strong>, <strong>설문 문구 세팅</strong>, <strong>Apps Script 코드</strong>가 완성됩니다.
+          </p>
         </div>
-        <h2 className="text-xl font-extrabold mt-1">단계별 Google 설문지 & 개인코드 자동 생성</h2>
-        <p className="text-xs text-slate-300 mt-1">
-          각 단계별로 [확인] 버튼을 누르면 <strong>학생 코드 매칭</strong>, <strong>설문 문구 세팅</strong>, <strong>Apps Script 코드</strong>가 완성됩니다.
-        </p>
+
+        {onLoadSampleData && (
+          <button
+            onClick={onLoadSampleData}
+            className="px-5 py-3 bg-amber-500 hover:bg-amber-400 font-extrabold text-slate-950 rounded-xl shadow-lg hover:shadow-amber-500/20 transition-all flex items-center gap-2 text-xs flex-shrink-0 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span>샘플 데이터로 바로 시작하기 (25명)</span>
+          </button>
+        )}
       </div>
 
       {/* Interactive Step Progress Bar Header */}
