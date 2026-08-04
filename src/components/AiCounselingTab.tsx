@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Student, DomainAnalysisResult, StudentMetrics } from "../types/sna";
 import { Sparkles, Bot, UserCheck, ShieldAlert, Award, FileText, Printer, Loader2, Key, CheckCircle2, AlertCircle, Download, ShieldCheck } from "lucide-react";
 import { getAnonymizedName } from "../utils/anonymizer";
+import { escapeHtml } from "../utils/escapeHtml";
 
 interface Props {
   overallResult: DomainAnalysisResult;
@@ -80,14 +81,16 @@ export const AiCounselingTab: React.FC<Props> = ({
       day: "numeric",
     });
 
-    const fullTitle = `${reportTitle}${subName ? ` - ${subName}` : ""}`;
+    const fullTitle = escapeHtml(`${reportTitle}${subName ? ` - ${subName}` : ""}`);
+    const safeClassNameTitle = escapeHtml(classNameTitle);
+    const safeReportContent = escapeHtml(reportContent);
 
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="ko">
       <head>
         <meta charset="UTF-8">
-        <title>CRA_${classNameTitle}_${reportTitle}${subName ? `_${subName}` : ""}</title>
+        <title>CRA_${safeClassNameTitle}_${escapeHtml(reportTitle)}${subName ? `_${escapeHtml(subName)}` : ""}</title>
         <style>
           @page { size: A4; margin: 20mm; }
           body {
@@ -157,7 +160,7 @@ export const AiCounselingTab: React.FC<Props> = ({
             <div>발행일: ${dateStr}</div>
           </div>
         </div>
-        <div class="report-body">${reportContent}</div>
+        <div class="report-body">${safeReportContent}</div>
         <div class="footer">
           본 보고서는 CRA 교우관계 분석 시스템(by 두리쌤)에서 생성된 AI 맞춤 리포트입니다. (개인정보보호 준수)
         </div>

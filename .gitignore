@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# 실제 학생 데이터 포함 (public 레포에 절대 커밋 금지)
+sample-data/

@@ -2,33 +2,52 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+// CORS: AI 엔드포인트는 배포 도메인/로컬 개발 origin에서만 호출 가능해야 함
+const ALLOWED_ORIGINS = new Set([
+  "https://cra-project-two.vercel.app",
+  "http://localhost:3000",
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-gemini-api-key");
+  }
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 app.use(express.json({ limit: "10mb" }));
 
-// Initialize Gemini Client
-let aiClient: GoogleGenAI | null = null;
-function getGeminiClient() {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not set in environment variables.");
-    }
-    aiClient = new GoogleGenAI({
-      apiKey: apiKey || "",
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
+// Gemini 클라이언트는 사용자가 매 요청마다 보내는 개인 API Key(BYOK)로만 생성한다.
+// 서버는 어떤 Gemini API Key도 보관/폴백하지 않는다.
+function getGeminiClient(apiKey: string) {
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
       },
-    });
-  }
-  return aiClient;
+    },
+  });
+}
+
+function extractApiKey(req: express.Request): string | null {
+  const headerKey = req.headers["x-gemini-api-key"];
+  if (typeof headerKey === "string" && headerKey.trim()) return headerKey.trim();
+  const bodyKey = req.body?.userApiKey;
+  if (typeof bodyKey === "string" && bodyKey.trim()) return bodyKey.trim();
+  return null;
 }
 
 // Health check endpoint
@@ -45,10 +64,11 @@ app.post("/api/ai/student-advice", async (req, res) => {
       return res.status(400).json({ error: "Missing student parameters" });
     }
 
-    const ai = getGeminiClient();
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." });
+    const apiKey = extractApiKey(req);
+    if (!apiKey) {
+      return res.status(400).json({ error: "Gemini API Key가 필요합니다. 우측 상단에서 개인 API Key를 설정해 주세요." });
     }
+    const ai = getGeminiClient(apiKey);
 
     const prompt = `
 당신은 베테랑 중·고등학교 교우관계 상담 전문 교사입니다.
@@ -106,10 +126,11 @@ app.post("/api/ai/classroom-report", async (req, res) => {
   try {
     const { summary, isolatedStudents, popularStudents, bridgeStudents, communities, classSize } = req.body;
 
-    const ai = getGeminiClient();
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." });
+    const apiKey = extractApiKey(req);
+    if (!apiKey) {
+      return res.status(400).json({ error: "Gemini API Key가 필요합니다. 우측 상단에서 개인 API Key를 설정해 주세요." });
     }
+    const ai = getGeminiClient(apiKey);
 
     const prompt = `
 당신은 학교 폭력 예방 및 학급 경영 전문 수석교사입니다.
@@ -159,10 +180,11 @@ app.post("/api/ai/longitudinal-report", async (req, res) => {
   try {
     const { wave1Title, wave2Title, studentDeltas, riskChange, overallTrend } = req.body;
 
-    const ai = getGeminiClient();
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." });
+    const apiKey = extractApiKey(req);
+    if (!apiKey) {
+      return res.status(400).json({ error: "Gemini API Key가 필요합니다. 우측 상단에서 개인 API Key를 설정해 주세요." });
     }
+    const ai = getGeminiClient(apiKey);
 
     const prompt = `
 당신은 교우관계 Longitudinal(누적 변화) 분석 전문가입니다.

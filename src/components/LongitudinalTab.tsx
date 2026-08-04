@@ -4,6 +4,7 @@ import { calculateLongitudinalShift, analyzeSNA } from "../utils/snaEngine";
 import { SAMPLE_RESPONSES_WAVE1, SAMPLE_STUDENTS } from "../data/sampleData";
 import { TrendingUp, TrendingDown, GitCompare, ShieldAlert, Sparkles, ArrowRight, CheckCircle2, UserPlus, Bot, Loader2, Key, Download, Upload, ShieldCheck, Lock, AlertTriangle, HelpCircle, Info, X } from "lucide-react";
 import { getAnonymizedName } from "../utils/anonymizer";
+import { escapeHtml } from "../utils/escapeHtml";
 import { downloadFile } from "../utils/gephiExporter";
 
 interface Props {
@@ -168,7 +169,8 @@ export const LongitudinalTab: React.FC<Props> = ({
       day: "numeric",
     });
 
-    const fullTitle = `시기별 교우관계 변화 AI 심층 진단 리포트 (${wave1Title} vs ${wave2Title})`;
+    const fullTitle = `시기별 교우관계 변화 AI 심층 진단 리포트 (${escapeHtml(wave1Title)} vs ${escapeHtml(wave2Title)})`;
+    const safeAiReport = escapeHtml(aiReport);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -245,7 +247,7 @@ export const LongitudinalTab: React.FC<Props> = ({
             <div>발행일: ${dateStr}</div>
           </div>
         </div>
-        <div class="report-body">${aiReport}</div>
+        <div class="report-body">${safeAiReport}</div>
         <div class="footer">
           본 보고서는 CRA 교우관계 분석 시스템(by 두리쌤)에서 생성된 시기별 관계 변화 리포트입니다.
         </div>

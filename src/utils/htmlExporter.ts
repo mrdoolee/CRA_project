@@ -183,6 +183,12 @@ export function generateIntegratedHTML(
     let isAnonymous = false;
     let simulation = null;
 
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
     function openTipModal() {
       document.getElementById("tip-modal").style.display = "flex";
     }
@@ -346,7 +352,7 @@ export function generateIntegratedHTML(
         if (!comms[n.group]) comms[n.group] = n.color;
       });
       Object.entries(comms).forEach(([name, color]) => {
-        legend.innerHTML += '<div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:50%; background:' + color + ';"></span>' + name + '</div>';
+        legend.innerHTML += '<div style="display:flex; align-items:center; gap:8px;"><span style="width:12px; height:12px; border-radius:50%; background:' + esc(color) + ';"></span>' + esc(name) + '</div>';
       });
     }
 
@@ -365,11 +371,11 @@ export function generateIntegratedHTML(
     const tooltip = d3.select("#tooltip");
     function showTooltip(event, d, nameMap) {
       const m = d.metrics;
-      const mutualNames = (m.mutualPartners || []).map(p => nameMap[p] || p).join(', ') || '없음';
+      const mutualNames = esc((m.mutualPartners || []).map(p => nameMap[p] || p).join(', ') || '없음');
       tooltip.style("display", "block")
         .style("left", (event.pageX + 15) + "px")
         .style("top", (event.pageY - 15) + "px")
-        .html("<b>" + d.displayName + "</b> (" + m.community + ")<br>" +
+        .html("<b>" + esc(d.displayName) + "</b> (" + esc(m.community) + ")<br>" +
           "• 지목받은 횟수: " + m.inDegree + "회<br>" +
           "• 가중 인기점수: " + m.weightedInScore + "점<br>" +
           "• 맞지목 친구: " + m.mutualCount + "명 (" + mutualNames + ")");
@@ -379,12 +385,12 @@ export function generateIntegratedHTML(
     function selectStudent(event, d, nameMap, link) {
       if (event) event.stopPropagation();
       const m = d.metrics;
-      const mutualNames = (m.mutualPartners || []).map(p => nameMap[p] || p).join(', ') || '없음';
+      const mutualNames = esc((m.mutualPartners || []).map(p => nameMap[p] || p).join(', ') || '없음');
       const detail = document.getElementById('student-detail');
-      
-      detail.innerHTML = 
-        "<h3>👤 " + d.displayName + "</h3>" +
-        "<p style='font-size:12px; color:#4f46e5; font-weight:700; margin-bottom:8px;'>소속: " + m.community + " | 가중순위: " + m.rank + "위</p>" +
+
+      detail.innerHTML =
+        "<h3>👤 " + esc(d.displayName) + "</h3>" +
+        "<p style='font-size:12px; color:#4f46e5; font-weight:700; margin-bottom:8px;'>소속: " + esc(m.community) + " | 가중순위: " + m.rank + "위</p>" +
         "<div class='stat-grid' style='margin-bottom:12px;'>" +
           "<div class='stat-item'><div class='stat-label'>지목받은 횟수</div><div class='stat-val'>" + m.inDegree + "회</div></div>" +
           "<div class='stat-item'><div class='stat-label'>가중 인기점수</div><div class='stat-val'>" + m.weightedInScore + "점</div></div>" +
