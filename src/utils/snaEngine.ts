@@ -13,6 +13,17 @@ import {
 
 export const DEFAULT_WEIGHT_SCHEME: WeightScheme = [2.0, 1.5, 1.0];
 
+/**
+ * Extracts the nomination rank (1/2/3) from a survey question column title.
+ * This app's generated Google Form splits each rank into its own column, so
+ * the rank lives in the column title text ("... 1", "... (1순위)"), not in
+ * the response cell — a single response cell only ever holds one name.
+ */
+function extractRankFromColumnTitle(title: string): number | null {
+  const match = title.match(/([1-3])\s*(?:순위)?\)?\s*$/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 export const SUBGROUP_COLORS = [
   "#4F46E5", // Indigo
   "#059669", // Emerald
@@ -166,6 +177,11 @@ function calculateSingleDomainSNA(
       const targets = resp.choices[colKey];
       if (!Array.isArray(targets)) return;
 
+      // Prefer the rank encoded in the column title (this app's own survey
+      // format: one column per rank). Fall back to in-cell position for
+      // columns that instead pack multiple ranked choices into one cell.
+      const columnRank = extractRankFromColumnTitle(colKey);
+
       targets.forEach((targetRaw, idx) => {
         const target = (targetRaw || "").toString().trim();
         // Self-loop check & validity check
@@ -173,7 +189,8 @@ function calculateSingleDomainSNA(
         if (["없음", "nan", "None", "null"].includes(target.toLowerCase())) return;
 
         // Rank weight logic (1st=w[0], 2nd=w[1], 3rd=w[2])
-        const rankIndex = idx % 3;
+        const rankNumber = columnRank !== null ? columnRank : idx + 1;
+        const rankIndex = Math.min(rankNumber, weights.length) - 1;
         const weight = weights[rankIndex] !== undefined ? weights[rankIndex] : 1.0;
 
         const key = `${source}->${target}`;
