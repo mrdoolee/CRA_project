@@ -96,8 +96,17 @@ export const GoogleScriptGeneratorTab: React.FC<Props> = ({
 
   // Generate Google Apps Script code string
   const generatedScript = useMemo(() => {
+    // Escape backslash/double-quote so a student name can't break out of the
+    // generated Apps Script string literal (this script runs with the
+    // teacher's own Google account permissions when they paste & execute it).
+    const escapeJsStringLiteral = (s: string) =>
+      s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    // Comments can't be escaped, so neutralize any "*/" that would close the
+    // surrounding /** ... */ block comment early.
+    const escapeBlockComment = (s: string) => s.replace(/\*\//g, "* /");
+
     const studentRows = studentListWithCodes
-      .map((s) => `      ["${s.name}", "${s.code}"]`)
+      .map((s) => `      ["${escapeJsStringLiteral(s.name)}", "${escapeJsStringLiteral(s.code)}"]`)
       .join(",\n");
 
     // Format section1Desc for JS string literal inside Apps Script
@@ -108,7 +117,7 @@ export const GoogleScriptGeneratorTab: React.FC<Props> = ({
 
     return `/**
  * =================================================================
- * Google 설문지 자동 생성 Apps Script (${formTitle} - SNA 설문)
+ * Google 설문지 자동 생성 Apps Script (${escapeBlockComment(formTitle)} - SNA 설문)
  * =================================================================
  * [사용 방법]
  * 1. 구글 스프레드시트(sheets.new) 생성 후
