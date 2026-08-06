@@ -468,7 +468,7 @@ export default function App() {
               onUpdateData={(newStudents, newResponses, newSelfAssessments) => {
                 setStudents(newStudents);
                 setResponses(newResponses);
-                setSelfAssessments(newSelfAssessments);
+                if (newSelfAssessments !== undefined) setSelfAssessments(newSelfAssessments);
               }}
               onUpdateWeights={setWeights}
               onUpdateWaveTitle={setWaveTitle}
