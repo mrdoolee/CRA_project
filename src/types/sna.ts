@@ -16,6 +16,12 @@ export interface SurveyResponse {
   choices: Record<string, string[]>;
 }
 
+export interface SelfAssessmentResponse {
+  studentCode: string;
+  studentName: string;
+  answers: Record<string, string>; // 문항 원문 -> 응답 텍스트 원본 (예: "그렇다.")
+}
+
 export type WeightScheme = [number, number, number]; // [1순위점수, 2순위점수, 3순위점수]
 
 export interface DomainMapping {
