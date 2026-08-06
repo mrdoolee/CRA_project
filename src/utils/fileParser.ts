@@ -1,10 +1,11 @@
 import * as XLSX from "xlsx";
-import { Student, SurveyResponse } from "../types/sna";
+import { Student, SurveyResponse, SelfAssessmentResponse } from "../types/sna";
 
 export interface ParsedSurveyData {
   students: Student[];
   surveyResponses: SurveyResponse[];
   questionHeaders: string[];
+  selfAssessments: SelfAssessmentResponse[];
 }
 
 /**
@@ -101,12 +102,22 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
     allHeaders[1] ||
     allHeaders[0];
 
+  // Self-assessment grid columns are titled "[문항 원문]" (a leading space is
+  // common since Google Forms grid items don't prefix the item title).
+  // These are a separate dataset from the nomination questions below.
+  const selfAssessmentCols = allHeaders.filter((h) => h.trim().startsWith("["));
+
   // Detect choice columns (columns that ask for student choices)
   const questionHeaders = allHeaders.filter(
-    (h) => h !== targetCodeCol && !h.toLowerCase().includes("타임스탬프") && !h.toLowerCase().includes("timestamp")
+    (h) =>
+      h !== targetCodeCol &&
+      !h.toLowerCase().includes("타임스탐프") &&
+      !h.toLowerCase().includes("timestamp") &&
+      !selfAssessmentCols.includes(h)
   );
 
   const parsedResponses: SurveyResponse[] = [];
+  const selfAssessments: SelfAssessmentResponse[] = [];
   const extractedStudentsMap = new Map<string, Student>();
 
   cleanRows.forEach((row, idx) => {
@@ -139,6 +150,17 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
       choices[qHeader] = targets;
     });
 
+    if (selfAssessmentCols.length > 0) {
+      const answers: Record<string, string> = {};
+      selfAssessmentCols.forEach((qHeader) => {
+        const rawVal = String(row[qHeader] || "").trim();
+        if (rawVal) answers[qHeader] = rawVal;
+      });
+      if (Object.keys(answers).length > 0) {
+        selfAssessments.push({ studentCode: rawCode, studentName, answers });
+      }
+    }
+
     parsedResponses.push({
       id: `resp_${idx}`,
       studentCode: rawCode,
@@ -153,5 +175,6 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
     students: finalStudents,
     surveyResponses: parsedResponses,
     questionHeaders,
+    selfAssessments,
   };
 }
