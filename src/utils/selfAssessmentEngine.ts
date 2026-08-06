@@ -9,12 +9,34 @@ export const SELF_ASSESSMENT_SCALE: Record<string, number> = {
 };
 
 /**
+ * Normalizes a raw answer cell to one of the 5 known scale labels.
+ * Tries an exact match first (after trimming trailing periods), then falls
+ * back to keyword matching for near-variants some survey exports produce
+ * (e.g. "모르겠다." instead of "잘 모르겠다."). Order matters: more specific
+ * keywords ("정말", "전혀", "보통", "모르겠다") are checked before the bare
+ * "그렇다" fallback, since "그렇다" is a substring of "정말 그렇다".
+ * Returns null when nothing matches.
+ */
+export function normalizeAnswerLabel(raw: string): string | null {
+  const cleaned = raw.trim().replace(/\.+$/, "");
+  if (SELF_ASSESSMENT_SCALE[cleaned] !== undefined) return cleaned;
+
+  if (cleaned.includes("모르겠다")) return "잘 모르겠다";
+  if (cleaned.includes("정말") && cleaned.includes("그렇다")) return "정말 그렇다";
+  if (cleaned.includes("전혀") && cleaned.includes("아니다")) return "전혀 아니다";
+  if (cleaned.includes("보통")) return "보통이다";
+  if (cleaned.includes("그렇다")) return "그렇다";
+
+  return null;
+}
+
+/**
  * Maps a raw answer cell (e.g. "그렇다.") to its 1-5 scale score.
  * Returns null for anything that doesn't match one of the 5 known labels.
  */
 export function scoreAnswer(raw: string): number | null {
-  const cleaned = raw.trim().replace(/\.+$/, "");
-  return SELF_ASSESSMENT_SCALE[cleaned] ?? null;
+  const label = normalizeAnswerLabel(raw);
+  return label !== null ? SELF_ASSESSMENT_SCALE[label] : null;
 }
 
 export interface QuestionStat {
@@ -42,11 +64,10 @@ export function calculateQuestionStats(responses: SelfAssessmentResponse[]): Que
     responses.forEach((r) => {
       const raw = r.answers[question];
       if (!raw) return;
-      const cleaned = raw.trim().replace(/\.+$/, "");
-      const score = SELF_ASSESSMENT_SCALE[cleaned];
-      if (score === undefined) return;
-      distribution[cleaned] += 1;
-      total += score;
+      const label = normalizeAnswerLabel(raw);
+      if (label === null) return;
+      distribution[label] += 1;
+      total += SELF_ASSESSMENT_SCALE[label];
       count += 1;
     });
 
