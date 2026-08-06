@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Student, SelfAssessmentResponse } from "../types/sna";
-import { calculateQuestionStats, SELF_ASSESSMENT_SCALE } from "../utils/selfAssessmentEngine";
+import { calculateQuestionStats, scoreAnswer, SELF_ASSESSMENT_SCALE } from "../utils/selfAssessmentEngine";
 import { getAnonymizedName } from "../utils/anonymizer";
-import { Smile, ClipboardList } from "lucide-react";
+import { Smile, ClipboardList, User } from "lucide-react";
 
 interface Props {
   selfAssessments: SelfAssessmentResponse[];
@@ -19,6 +19,8 @@ export const SelfAssessmentTab: React.FC<Props> = ({
 }) => {
   const displayName = (name: string) =>
     getAnonymizedName(name, students.length > 0 ? students : selfAssessments, isAnonymous);
+
+  const [selectedCode, setSelectedCode] = useState<string>(selfAssessments[0]?.studentCode || "");
 
   if (selfAssessments.length === 0) {
     return (
@@ -37,6 +39,13 @@ export const SelfAssessmentTab: React.FC<Props> = ({
 
   const stats = calculateQuestionStats(selfAssessments);
   const questions = stats.map((s) => s.question);
+  const avgByQuestion: Record<string, number> = {};
+  stats.forEach((s) => {
+    avgByQuestion[s.question] = s.avgScore;
+  });
+
+  const selectedResponse =
+    selfAssessments.find((r) => r.studentCode === selectedCode) || selfAssessments[0];
 
   return (
     <div className="space-y-8">
@@ -79,33 +88,49 @@ export const SelfAssessmentTab: React.FC<Props> = ({
 
       {/* Per-student raw responses */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-slate-800">📋 학생별 자기평가 원본 응답</h3>
-        <div className="overflow-x-auto border border-slate-200 rounded-xl">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 text-slate-700 font-bold divide-y divide-slate-200">
-              <tr>
-                <th className="p-3">이름</th>
-                {questions.map((q) => (
-                  <th key={q} className="p-3">
-                    {q.trim()}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {selfAssessments.map((r) => (
-                <tr key={r.studentCode} className="hover:bg-slate-50">
-                  <td className="p-3 font-semibold text-slate-900">{displayName(r.studentName)}</td>
-                  {questions.map((q) => (
-                    <td key={q} className="p-3">
-                      {r.answers[q] || "-"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <User className="w-4 h-4 text-indigo-600" /> 학생별 자기평가 원본 응답
+          </h3>
+
+          <select
+            value={selectedResponse?.studentCode || ""}
+            onChange={(e) => setSelectedCode(e.target.value)}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {selfAssessments.map((r) => (
+              <option key={r.studentCode} value={r.studentCode}>
+                {displayName(r.studentName)}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {selectedResponse && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {questions.map((q) => {
+              const rawAnswer = selectedResponse.answers[q];
+              const score = rawAnswer ? scoreAnswer(rawAnswer) : null;
+              const avg = avgByQuestion[q];
+
+              let colorClass = "bg-slate-50 border-slate-200 text-slate-700";
+              if (score !== null && avg !== undefined) {
+                if (score > avg) colorClass = "bg-emerald-50 border-emerald-200 text-emerald-800";
+                else if (score < avg) colorClass = "bg-rose-50 border-rose-200 text-rose-800";
+              }
+
+              return (
+                <div key={q} className={`p-3.5 rounded-xl border ${colorClass}`}>
+                  <div className="text-[11px] font-semibold opacity-80 leading-snug">{q.trim()}</div>
+                  <div className="flex items-baseline justify-between mt-1.5">
+                    <span className="text-sm font-extrabold">{rawAnswer || "-"}</span>
+                    <span className="text-[11px] opacity-70">학급 평균 {avg?.toFixed(1) ?? "-"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
