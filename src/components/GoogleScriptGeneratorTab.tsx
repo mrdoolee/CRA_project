@@ -661,6 +661,20 @@ ${formattedDescLines};
           </p>
 
           <div className="space-y-4">
+            {/* Origin Notice Box */}
+            <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-[11px] text-indigo-950 leading-relaxed">
+              해당 설문 문항은{" "}
+              <a
+                href="https://app-omega-six-30.vercel.app/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold underline text-indigo-700 hover:text-indigo-900"
+              >
+                "우리반 관계지도"
+              </a>
+              의 설문 문항에 기반하여 재설계 되었습니다.
+            </div>
+
             {/* Form Title Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-800 block">
