@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Student, SurveyResponse, SelfAssessmentResponse, WeightScheme, DomainAnalysisResult } from "./types/sna";
-import { SAMPLE_STUDENTS, SAMPLE_RESPONSES_WAVE1 } from "./data/sampleData";
+import { SAMPLE_STUDENTS, SAMPLE_RESPONSES_WAVE1, SAMPLE_SELF_ASSESSMENTS } from "./data/sampleData";
 import { analyzeSNA } from "./utils/snaEngine";
 import { GoogleScriptGeneratorTab } from "./components/GoogleScriptGeneratorTab";
 import { SnaDashboardTab } from "./components/SnaDashboardTab";
@@ -95,7 +95,7 @@ export default function App() {
   const handleLoadSampleData = () => {
     setStudents(SAMPLE_STUDENTS);
     setResponses(SAMPLE_RESPONSES_WAVE1);
-    setSelfAssessments([]);
+    setSelfAssessments(SAMPLE_SELF_ASSESSMENTS);
     setClassNameTitle("3학년 2반");
     setWaveTitle("1차 조사 (1학기 초 3월)");
     setActiveTab("dashboard");
