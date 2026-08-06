@@ -111,7 +111,7 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
   const questionHeaders = allHeaders.filter(
     (h) =>
       h !== targetCodeCol &&
-      !h.toLowerCase().includes("타임스탐프") &&
+      !h.toLowerCase().includes("타임스탬프") &&
       !h.toLowerCase().includes("timestamp") &&
       !selfAssessmentCols.includes(h)
   );
