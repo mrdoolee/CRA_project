@@ -111,6 +111,7 @@ export default function App() {
       weights,
       students,
       responses,
+      selfAssessments,
       exportedAt: new Date().toISOString(),
     };
 
@@ -140,6 +141,11 @@ export default function App() {
         }
         if (data.responses && Array.isArray(data.responses)) {
           setResponses(data.responses);
+        }
+        if (data.selfAssessments && Array.isArray(data.selfAssessments)) {
+          setSelfAssessments(data.selfAssessments);
+        } else {
+          setSelfAssessments([]);
         }
         if (data.weights && Array.isArray(data.weights)) {
           setWeights(data.weights);
