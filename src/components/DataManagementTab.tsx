@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Student, SurveyResponse, WeightScheme } from "../types/sna";
+import { Student, SurveyResponse, SelfAssessmentResponse, WeightScheme } from "../types/sna";
 import { parseRosterFile, parseSurveyFile } from "../utils/fileParser";
 import { Upload, Users, FileSpreadsheet, Settings2, Plus, Sparkles, CheckCircle2, FolderOpen } from "lucide-react";
 
@@ -8,7 +8,11 @@ interface Props {
   surveyResponses: SurveyResponse[];
   weights: WeightScheme;
   waveTitle: string;
-  onUpdateData: (newStudents: Student[], newResponses: SurveyResponse[]) => void;
+  onUpdateData: (
+    newStudents: Student[],
+    newResponses: SurveyResponse[],
+    newSelfAssessments?: SelfAssessmentResponse[]
+  ) => void;
   onUpdateWeights: (newWeights: WeightScheme) => void;
   onUpdateWaveTitle: (newTitle: string) => void;
   onLoadSampleData: () => void;
@@ -58,7 +62,7 @@ export const DataManagementTab: React.FC<Props> = ({
       setLoading(true);
       setStatusMsg("구글 설문 응답 파싱 중...");
       const result = await parseSurveyFile(file, students);
-      onUpdateData(result.students, result.surveyResponses);
+      onUpdateData(result.students, result.surveyResponses, result.selfAssessments);
       setStatusMsg(
         `✅ 설문 응답 불러오기 완료: 총 ${result.surveyResponses.length}건의 응답 데이터 파싱 성공!`
       );
@@ -95,7 +99,7 @@ export const DataManagementTab: React.FC<Props> = ({
             <span>이전에 저장한 백업 파일(.json)이 있으신가요?</span>
           </div>
           <p className="text-xs text-slate-300">
-            다운로드해 둔 .json 백업 파일을 선택하시면 1, 2번 재설정 과정 없이 즉시 [3. 관계망 분석]으로 이동합니다.
+            다운로드해 둔 .json 백업 파일을 선택하시면 1, 2번 재설정 과정 없이 즉시 [4. 관계망 분석]으로 이동합니다.
           </p>
         </div>
         <label className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all flex items-center gap-2 flex-shrink-0">

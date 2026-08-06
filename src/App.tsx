@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { Student, SurveyResponse, WeightScheme, DomainAnalysisResult } from "./types/sna";
+import { Student, SurveyResponse, SelfAssessmentResponse, WeightScheme, DomainAnalysisResult } from "./types/sna";
 import { SAMPLE_STUDENTS, SAMPLE_RESPONSES_WAVE1 } from "./data/sampleData";
 import { analyzeSNA } from "./utils/snaEngine";
 import { GoogleScriptGeneratorTab } from "./components/GoogleScriptGeneratorTab";
 import { SnaDashboardTab } from "./components/SnaDashboardTab";
 import { DataManagementTab } from "./components/DataManagementTab";
+import { SelfAssessmentTab } from "./components/SelfAssessmentTab";
 import { AiCounselingTab } from "./components/AiCounselingTab";
 import { LongitudinalTab } from "./components/LongitudinalTab";
 import { GephiExportTab } from "./components/GephiExportTab";
@@ -32,12 +33,13 @@ import {
   Eye,
   Settings,
   Info,
+  Smile,
 } from "lucide-react";
 
 export default function App() {
   // Navigation active tab: "script" (1번 메뉴: Google 설문지 생성) is placed FIRST as requested
   const [activeTab, setActiveTab] = useState<
-    "script" | "import" | "dashboard" | "counseling" | "history" | "gephi"
+    "script" | "import" | "selfAssessment" | "dashboard" | "counseling" | "history" | "gephi"
   >("script");
 
   // Gemini API Key state from localStorage
@@ -61,6 +63,7 @@ export default function App() {
   // State for students and responses (처음 접속 시 빈 데이터 상태)
   const [students, setStudents] = useState<Student[]>([]);
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
+  const [selfAssessments, setSelfAssessments] = useState<SelfAssessmentResponse[]>([]);
 
   // Check if survey response data is loaded
   const hasData = responses.length > 0;
@@ -92,6 +95,7 @@ export default function App() {
   const handleLoadSampleData = () => {
     setStudents(SAMPLE_STUDENTS);
     setResponses(SAMPLE_RESPONSES_WAVE1);
+    setSelfAssessments([]);
     setClassNameTitle("3학년 2반");
     setWaveTitle("1차 조사 (1학기 초 3월)");
     setActiveTab("dashboard");
@@ -150,7 +154,7 @@ export default function App() {
           setTeacherName(data.teacherName);
         }
         setActiveTab("dashboard");
-        alert("✅ 백업 데이터 복원 완료! [3. 관계망 분석] 화면으로 이동했습니다.");
+        alert("✅ 백업 데이터 복원 완료! [4. 관계망 분석] 화면으로 이동했습니다.");
       } catch (err: any) {
         alert("올바르지 않은 백업(.json) 파일입니다: " + err.message);
       }
@@ -213,7 +217,35 @@ export default function App() {
             <span className="truncate">2. 설문/명렬표 데이터 관리</span>
           </button>
 
-          {/* 3. 관계망 분석 (Network Dashboard) */}
+          {/* 3. 학생 자기평가 */}
+          <button
+            onClick={() => {
+              if (!hasData) {
+                alert("분석할 설문 응답 데이터가 없습니다.\n1번 메뉴에서 [샘플 데이터로 바로 시작하기]를 클릭하시거나,\n2번 메뉴에서 구글 설문 응답(CSV/엑셀)을 등록해 주세요.");
+                return;
+              }
+              setActiveTab("selfAssessment");
+            }}
+            className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "selfAssessment"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                : hasData
+                ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
+                : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
+            }`}
+          >
+            <div className="flex items-center min-w-0">
+              <Smile className="w-4 h-4 mr-2.5 flex-shrink-0 text-amber-400" />
+              <span className="truncate">3. 학생 자기평가</span>
+            </div>
+            {!hasData && (
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
+                데이터 필요
+              </span>
+            )}
+          </button>
+
+          {/* 4. 관계망 분석 (Network Dashboard) */}
           <button
             onClick={() => {
               if (!hasData) {
@@ -232,7 +264,7 @@ export default function App() {
           >
             <div className="flex items-center min-w-0">
               <Network className="w-4 h-4 mr-2.5 flex-shrink-0 text-indigo-400" />
-              <span className="truncate">3. 관계망 분석 (Sociogram)</span>
+              <span className="truncate">4. 관계망 분석 (Sociogram)</span>
             </div>
             {!hasData && (
               <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
@@ -241,7 +273,7 @@ export default function App() {
             )}
           </button>
 
-          {/* 4. AI 맞춤 상담 조언 */}
+          {/* 5. AI 맞춤 상담 조언 */}
           <button
             onClick={() => {
               if (!hasData) {
@@ -260,7 +292,7 @@ export default function App() {
           >
             <div className="flex items-center min-w-0">
               <Sparkles className="w-4 h-4 mr-2.5 text-amber-400 flex-shrink-0" />
-              <span className="truncate">4. AI 맞춤 상담 조언</span>
+              <span className="truncate">5. AI 맞춤 상담 조언</span>
             </div>
             {hasData ? (
               <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold flex-shrink-0 ml-1">
@@ -273,7 +305,7 @@ export default function App() {
             )}
           </button>
 
-          {/* 5. 누적 관계 변화 (History) */}
+          {/* 6. 누적 관계 변화 (History) */}
           <button
             onClick={() => {
               if (!hasData) {
@@ -292,7 +324,7 @@ export default function App() {
           >
             <div className="flex items-center min-w-0">
               <GitCompare className="w-4 h-4 mr-2.5 text-indigo-400 flex-shrink-0" />
-              <span className="truncate">5. 누적 관계 변화 (History)</span>
+              <span className="truncate">6. 누적 관계 변화 (History)</span>
             </div>
             {!hasData && (
               <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
@@ -301,7 +333,7 @@ export default function App() {
             )}
           </button>
 
-          {/* 6. Gephi / 보고서 / 백업 데이터 */}
+          {/* 7. Gephi / 보고서 / 백업 데이터 */}
           <button
             onClick={() => {
               if (!hasData) {
@@ -317,11 +349,11 @@ export default function App() {
                 ? "text-slate-300 hover:bg-slate-800/70 hover:text-slate-200"
                 : "text-slate-500 hover:bg-slate-800/40 cursor-not-allowed"
             }`}
-            title="6. Gephi / 보고서 / 백업 데이터 저장"
+            title="7. Gephi / 보고서 / 백업 데이터 저장"
           >
             <div className="flex items-center min-w-0">
               <FileCode className="w-4 h-4 mr-2.5 flex-shrink-0" />
-              <span className="truncate">6. Gephi / 보고서 / 백업</span>
+              <span className="truncate">7. Gephi / 보고서 / 백업</span>
             </div>
             {!hasData && (
               <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px] font-medium flex-shrink-0 ml-1">
@@ -380,15 +412,16 @@ export default function App() {
             <span className="px-3.5 py-1.5 bg-indigo-50 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-100 flex items-center gap-2">
               {activeTab === "script" && "1. Google 설문지 생성"}
               {activeTab === "import" && "2. 설문/명렬표 데이터 관리"}
-              {activeTab === "dashboard" && "3. 관계망 분석 (Sociogram)"}
-              {activeTab === "counseling" && "4. AI 맞춤 상담 조언"}
-              {activeTab === "history" && "5. 누적 관계 변화 (History)"}
-              {activeTab === "gephi" && "6. Gephi / 보고서 / 백업 데이터"}
+              {activeTab === "selfAssessment" && "3. 학생 자기평가"}
+              {activeTab === "dashboard" && "4. 관계망 분석 (Sociogram)"}
+              {activeTab === "counseling" && "5. AI 맞춤 상담 조언"}
+              {activeTab === "history" && "6. 누적 관계 변화 (History)"}
+              {activeTab === "gephi" && "7. Gephi / 보고서 / 백업 데이터"}
             </span>
           </div>
 
-          {/* Action buttons visible on Menu 3~6 */}
-          {["dashboard", "counseling", "history", "gephi"].includes(activeTab) && (
+          {/* Action buttons visible on Menu 3~7 */}
+          {["selfAssessment", "dashboard", "counseling", "history", "gephi"].includes(activeTab) && (
             <div className="flex items-center space-x-3">
               {/* Student Name Anonymization Toggle */}
               <button
@@ -432,14 +465,23 @@ export default function App() {
               surveyResponses={responses}
               weights={weights}
               waveTitle={waveTitle}
-              onUpdateData={(newStudents, newResponses) => {
+              onUpdateData={(newStudents, newResponses, newSelfAssessments) => {
                 setStudents(newStudents);
                 setResponses(newResponses);
+                setSelfAssessments(newSelfAssessments);
               }}
               onUpdateWeights={setWeights}
               onUpdateWaveTitle={setWaveTitle}
               onLoadSampleData={handleLoadSampleData}
               onUploadBackupFile={handleUploadLocalBackupFile}
+            />
+          )}
+
+          {hasData && activeTab === "selfAssessment" && (
+            <SelfAssessmentTab
+              selfAssessments={selfAssessments}
+              students={students}
+              isAnonymous={isAnonymous}
             />
           )}
 
