@@ -26,7 +26,6 @@ import {
   FileSpreadsheet,
   Download,
   Users,
-  Laptop,
   ShieldCheck,
   Key,
   EyeOff,
@@ -384,7 +383,7 @@ export default function App() {
             {apiKey ? "Gemini API Key 설정됨" : "🔑 Gemini API Key 설정"}
           </button>
 
-          {/* 2. Privacy Protection Card & Offline EXE Guide */}
+          {/* 2. Privacy Protection Card */}
           <div className="p-2.5 bg-slate-800/80 border border-emerald-500/30 rounded-xl space-y-2">
             <div className="text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 leading-tight">
               <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -394,8 +393,8 @@ export default function App() {
               onClick={() => setIsExeModalOpen(true)}
               className="w-full py-1.5 px-2 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <Laptop className="w-3.5 h-3.5 text-white" />
-              <span>오프라인 .EXE 실행 가이드</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+              <span>개인정보보호 안내 보기</span>
             </button>
           </div>
 
