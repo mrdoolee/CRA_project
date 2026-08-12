@@ -10,6 +10,7 @@ import { AiCounselingTab } from "./components/AiCounselingTab";
 import { LongitudinalTab } from "./components/LongitudinalTab";
 import { GephiExportTab } from "./components/GephiExportTab";
 import { LocalExeGuideModal } from "./components/LocalExeGuideModal";
+import { AddonAppsModal } from "./components/AddonAppsModal";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { SystemInfoModal } from "./components/SystemInfoModal";
 import { Footer } from "./components/Footer";
@@ -33,6 +34,8 @@ import {
   Settings,
   Info,
   Smile,
+  HelpCircle,
+  LayoutGrid,
 } from "lucide-react";
 
 export default function App() {
@@ -72,6 +75,7 @@ export default function App() {
 
   // Modal for local EXE guide & teacher profile
   const [isExeModalOpen, setIsExeModalOpen] = useState<boolean>(false);
+  const [isAddonModalOpen, setIsAddonModalOpen] = useState<boolean>(false);
   const [isTeacherProfileEdit, setIsTeacherProfileEdit] = useState<boolean>(false);
 
   const handleSaveApiKey = (newKey: string) => {
@@ -370,6 +374,12 @@ export default function App() {
 
         {/* Sidebar Footer User Info & Local EXE Mode Button */}
         <div className="p-3.5 border-t border-slate-800 space-y-2.5">
+          {/* 0. Usage Guide Section Label */}
+          <div className="px-1 pt-0.5 text-[10px] font-bold text-slate-400 flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+            <span>사용 가이드</span>
+          </div>
+
           {/* 1. Gemini API Key Config Quick Button */}
           <button
             onClick={() => setIsApiKeyModalOpen(true)}
@@ -398,7 +408,16 @@ export default function App() {
             </button>
           </div>
 
-          {/* 3. CRA System Info & Usage Guide Button */}
+          {/* 3. Add-on Companion Apps Button */}
+          <button
+            onClick={() => setIsAddonModalOpen(true)}
+            className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-700/60"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Add-on 자리배치 앱 안내</span>
+          </button>
+
+          {/* 4. CRA System Info & Usage Guide Button */}
           <button
             onClick={() => setIsInfoModalOpen(true)}
             className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-700/60"
@@ -608,6 +627,12 @@ export default function App() {
       <SystemInfoModal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
+      />
+
+      {/* Add-on Companion Apps Modal */}
+      <AddonAppsModal
+        isOpen={isAddonModalOpen}
+        onClose={() => setIsAddonModalOpen(false)}
       />
     </div>
   );
