@@ -11,6 +11,7 @@ import { LongitudinalTab } from "./components/LongitudinalTab";
 import { GephiExportTab } from "./components/GephiExportTab";
 import { LocalExeGuideModal } from "./components/LocalExeGuideModal";
 import { AddonAppsModal } from "./components/AddonAppsModal";
+import { UsageGuideModal } from "./components/UsageGuideModal";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { SystemInfoModal } from "./components/SystemInfoModal";
 import { Footer } from "./components/Footer";
@@ -76,6 +77,7 @@ export default function App() {
   // Modal for local EXE guide & teacher profile
   const [isExeModalOpen, setIsExeModalOpen] = useState<boolean>(false);
   const [isAddonModalOpen, setIsAddonModalOpen] = useState<boolean>(false);
+  const [isUsageGuideModalOpen, setIsUsageGuideModalOpen] = useState<boolean>(false);
   const [isTeacherProfileEdit, setIsTeacherProfileEdit] = useState<boolean>(false);
 
   const handleSaveApiKey = (newKey: string) => {
@@ -374,11 +376,14 @@ export default function App() {
 
         {/* Sidebar Footer User Info & Local EXE Mode Button */}
         <div className="p-3.5 border-t border-slate-800 space-y-2.5">
-          {/* 0. Usage Guide Section Label */}
-          <div className="px-1 pt-0.5 text-[10px] font-bold text-slate-400 flex items-center gap-1.5">
+          {/* 0. Usage Guide Button */}
+          <button
+            onClick={() => setIsUsageGuideModalOpen(true)}
+            className="w-full px-1 py-1 text-[10px] font-bold text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors"
+          >
             <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
             <span>사용 가이드</span>
-          </div>
+          </button>
 
           {/* 1. Gemini API Key Config Quick Button */}
           <button
@@ -633,6 +638,12 @@ export default function App() {
       <AddonAppsModal
         isOpen={isAddonModalOpen}
         onClose={() => setIsAddonModalOpen(false)}
+      />
+
+      {/* Usage Guide Modal */}
+      <UsageGuideModal
+        isOpen={isUsageGuideModalOpen}
+        onClose={() => setIsUsageGuideModalOpen(false)}
       />
     </div>
   );
