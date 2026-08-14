@@ -297,10 +297,10 @@ ${formattedDescLines};
       label: '우리 반에서 우리 반 분위기를 이끄는 친구'
     },
     {
-      title: '2학기에는 더 친해지고 싶은 친구 3명은 누구인가요?',
+      title: '앞으로 더 친해지고 싶은 친구 3명은 누구인가요?',
       desc: descMustThree,
       allowNone: false,
-      label: '2학기에는 더 친해지고 싶은 친구'
+      label: '앞으로 더 친해지고 싶은 친구'
     }
   ];
 
