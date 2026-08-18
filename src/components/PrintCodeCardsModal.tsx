@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Printer, X, Download, Scissors, Shield, Key } from "lucide-react";
 
 interface Props {
@@ -27,32 +28,95 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
     window.print();
   };
 
+  // Rendered twice: once for the on-screen live preview (inside the scrollable
+  // modal below) and once through the portal further down for actual print
+  // output. The portal copy is a plain child of <body>, outside the modal's
+  // overflow/flex ancestor chain — a previous version tried to print directly
+  // from the on-screen copy and reset those ancestors' overflow/height for
+  // print, but that interacted badly with their flex layout (flex-1 inside an
+  // auto-height column) and produced a blank page in production. Rendering an
+  // independent, unstyled copy at the body root sidesteps that entirely.
+  const renderPages = () =>
+    pages.map((pageStudents, pageIdx) => (
+      <div
+        key={pageIdx}
+        className="a4-page bg-white p-5 mx-auto rounded-xl shadow-md border border-slate-300 grid grid-cols-2 grid-rows-5 gap-3"
+        style={{
+          width: "210mm",
+          minHeight: "285mm",
+          maxHeight: "285mm",
+          boxSizing: "border-box",
+        }}
+      >
+        {pageStudents.map((st, cardIdx) => (
+          <div
+            key={st.name + cardIdx}
+            className="print-card border-2 border-dashed border-slate-400 rounded-xl p-3.5 bg-white flex flex-col justify-between relative hover:border-indigo-500 transition-colors"
+            style={{ minHeight: "51mm" }}
+          >
+            {/* Top Scissor Guide Icon */}
+            <div className="absolute top-1.5 right-2 text-slate-300 flex items-center gap-0.5 text-[9px] font-mono">
+              <Scissors className="w-3 h-3" /> 절단선
+            </div>
+
+            {/* Card Header */}
+            <div>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 uppercase tracking-tight">
+                <Shield className="w-3 h-3 text-indigo-600" />
+                <span>{classNameTitle} 교우관계 설문 개인 보안 카드</span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between border-b border-slate-200 pb-1">
+                <span className="text-xs text-slate-500 font-medium">학생 이름:</span>
+                <span className="text-base font-black text-slate-900 tracking-tight">
+                  {st.name}
+                </span>
+              </div>
+            </div>
+
+            {/* Personal Code Section */}
+            <div className="my-1.5 p-2 bg-indigo-50/80 border border-indigo-200 rounded-lg text-center">
+              <div className="text-[10px] font-bold text-indigo-600 flex items-center justify-center gap-1">
+                <Key className="w-3 h-3" /> 설문 접속 4자리 개인 코드
+              </div>
+              <div className="text-xl font-black font-mono tracking-[0.25em] text-indigo-950 mt-0.5">
+                {st.code}
+              </div>
+            </div>
+
+            {/* Footer Notice */}
+            <div className="text-[9px] text-slate-500 leading-tight">
+              ※ 이 코드는 설문 응답 본인 인증용입니다. 타인에게 절대 보여주지 마세요.
+            </div>
+          </div>
+        ))}
+
+        {/* Fill empty slots if page has less than 10 students */}
+        {Array.from({ length: pageSize - pageStudents.length }).map((_, emptyIdx) => (
+          <div
+            key={`empty-${emptyIdx}`}
+            className="border border-dashed border-slate-200 rounded-xl p-3 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-300 font-mono"
+            style={{ minHeight: "51mm" }}
+          >
+            빈 카드
+          </div>
+        ))}
+      </div>
+    ));
+
   return (
-    <div id="pcc-modal-backdrop" className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       {/* Printable CSS Injection */}
       <style>{`
         @media print {
-          /* Hide all UI elements except printable area */
+          /* Hide all UI elements except the print portal */
           body * {
             visibility: hidden !important;
           }
           #printable-cards-container, #printable-cards-container * {
             visibility: visible !important;
           }
-          /* These wrappers scroll/clip the modal on screen (overflow-y-auto,
-             overflow-hidden, max-h-[90vh]). visibility:hidden doesn't relax
-             those constraints, so without this the printed output gets cut
-             off at the on-screen scroll viewport height — only the first
-             page (or part of it) would print. */
-          #pcc-modal-backdrop, #pcc-modal-box, #pcc-scroll-area {
-            position: static !important;
-            overflow: visible !important;
-            height: auto !important;
-            max-height: none !important;
-            padding: 0 !important;
-          }
           #printable-cards-container {
-            position: static !important;
+            position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
@@ -95,9 +159,15 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
             print-color-adjust: exact !important;
           }
         }
+        @media screen {
+          /* The print portal is only ever meant to be printed, never seen */
+          #printable-cards-container {
+            display: none !important;
+          }
+        }
       `}</style>
 
-      <div id="pcc-modal-box" className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between flex-shrink-0 border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -146,75 +216,9 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
           </span>
         </div>
 
-        {/* Scrollable Live Preview Area */}
-        <div id="pcc-scroll-area" className="p-6 overflow-y-auto bg-slate-200/60 flex-1 space-y-8">
-          <div id="printable-cards-container" className="space-y-8">
-            {pages.map((pageStudents, pageIdx) => (
-              <div
-                key={pageIdx}
-                className="a4-page bg-white p-5 mx-auto rounded-xl shadow-md border border-slate-300 grid grid-cols-2 grid-rows-5 gap-3"
-                style={{
-                  width: "210mm",
-                  minHeight: "285mm",
-                  maxHeight: "285mm",
-                  boxSizing: "border-box",
-                }}
-              >
-                {pageStudents.map((st, cardIdx) => (
-                  <div
-                    key={st.name + cardIdx}
-                    className="print-card border-2 border-dashed border-slate-400 rounded-xl p-3.5 bg-white flex flex-col justify-between relative hover:border-indigo-500 transition-colors"
-                    style={{ minHeight: "51mm" }}
-                  >
-                    {/* Top Scissor Guide Icon */}
-                    <div className="absolute top-1.5 right-2 text-slate-300 flex items-center gap-0.5 text-[9px] font-mono">
-                      <Scissors className="w-3 h-3" /> 절단선
-                    </div>
-
-                    {/* Card Header */}
-                    <div>
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 uppercase tracking-tight">
-                        <Shield className="w-3 h-3 text-indigo-600" />
-                        <span>{classNameTitle} 교우관계 설문 개인 보안 카드</span>
-                      </div>
-                      <div className="mt-1 flex items-baseline justify-between border-b border-slate-200 pb-1">
-                        <span className="text-xs text-slate-500 font-medium">학생 이름:</span>
-                        <span className="text-base font-black text-slate-900 tracking-tight">
-                          {st.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Personal Code Section */}
-                    <div className="my-1.5 p-2 bg-indigo-50/80 border border-indigo-200 rounded-lg text-center">
-                      <div className="text-[10px] font-bold text-indigo-600 flex items-center justify-center gap-1">
-                        <Key className="w-3 h-3" /> 설문 접속 4자리 개인 코드
-                      </div>
-                      <div className="text-xl font-black font-mono tracking-[0.25em] text-indigo-950 mt-0.5">
-                        {st.code}
-                      </div>
-                    </div>
-
-                    {/* Footer Notice */}
-                    <div className="text-[9px] text-slate-500 leading-tight">
-                      ※ 이 코드는 설문 응답 본인 인증용입니다. 타인에게 절대 보여주지 마세요.
-                    </div>
-                  </div>
-                ))}
-
-                {/* Fill empty slots if page has less than 10 students */}
-                {Array.from({ length: pageSize - pageStudents.length }).map((_, emptyIdx) => (
-                  <div
-                    key={`empty-${emptyIdx}`}
-                    className="border border-dashed border-slate-200 rounded-xl p-3 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-300 font-mono"
-                    style={{ minHeight: "51mm" }}
-                  >
-                    빈 카드
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+        {/* Scrollable Live Preview Area (visual reference only — not used for print) */}
+        <div className="p-6 overflow-y-auto bg-slate-200/60 flex-1 space-y-8">
+          <div className="space-y-8">{renderPages()}</div>
         </div>
 
         {/* Modal Footer */}
@@ -240,6 +244,13 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {createPortal(
+        <div id="printable-cards-container" className="space-y-8">
+          {renderPages()}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
