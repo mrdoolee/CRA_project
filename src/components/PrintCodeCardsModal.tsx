@@ -28,7 +28,7 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div id="pcc-modal-backdrop" className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       {/* Printable CSS Injection */}
       <style>{`
         @media print {
@@ -39,8 +39,20 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
           #printable-cards-container, #printable-cards-container * {
             visibility: visible !important;
           }
+          /* These wrappers scroll/clip the modal on screen (overflow-y-auto,
+             overflow-hidden, max-h-[90vh]). visibility:hidden doesn't relax
+             those constraints, so without this the printed output gets cut
+             off at the on-screen scroll viewport height — only the first
+             page (or part of it) would print. */
+          #pcc-modal-backdrop, #pcc-modal-box, #pcc-scroll-area {
+            position: static !important;
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            padding: 0 !important;
+          }
           #printable-cards-container {
-            position: absolute !important;
+            position: static !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
@@ -85,7 +97,7 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
         }
       `}</style>
 
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div id="pcc-modal-box" className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between flex-shrink-0 border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -135,7 +147,7 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
         </div>
 
         {/* Scrollable Live Preview Area */}
-        <div className="p-6 overflow-y-auto bg-slate-200/60 flex-1 space-y-8">
+        <div id="pcc-scroll-area" className="p-6 overflow-y-auto bg-slate-200/60 flex-1 space-y-8">
           <div id="printable-cards-container" className="space-y-8">
             {pages.map((pageStudents, pageIdx) => (
               <div
