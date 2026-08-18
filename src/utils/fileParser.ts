@@ -9,6 +9,17 @@ export interface ParsedSurveyData {
 }
 
 /**
+ * Collapses all whitespace (including stray tabs from copy-pasted multi-column
+ * cells, e.g. "2101\t강민제") into single spaces so names built from the roster
+ * file line up with free-text nomination targets like "2101 강민제" from the
+ * survey response file — otherwise exact-match name comparisons in
+ * snaEngine.ts silently drop every nomination.
+ */
+function normalizeName(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim();
+}
+
+/**
  * Parses uploaded roster file (명렬표)
  */
 export async function parseRosterFile(file: File): Promise<Student[]> {
@@ -48,7 +59,7 @@ export async function parseRosterFile(file: File): Promise<Student[]> {
 
   cleanRows.forEach((row, idx) => {
     let code = String(row[codeCol] || "").trim().replace(/\.0$/, "");
-    let name = String(row[nameCol] || "").trim();
+    let name = normalizeName(String(row[nameCol] || ""));
 
     if (name) {
       students.push({
@@ -102,10 +113,12 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
     allHeaders[1] ||
     allHeaders[0];
 
-  // Self-assessment grid columns are titled "[문항 원문]" (a leading space is
-  // common since Google Forms grid items don't prefix the item title).
+  // Self-assessment grid columns come from Google Forms grid questions, which
+  // Sheets exports as "<그룹 제목> [<문항>]" — e.g. "나의 생각과 느낌 [[나는 ...]]".
+  // The bracketed part can appear anywhere in the header, not just at the
+  // start, so match on the "[[...]]" pattern itself rather than a startsWith.
   // These are a separate dataset from the nomination questions below.
-  const selfAssessmentCols = allHeaders.filter((h) => h.trim().startsWith("["));
+  const selfAssessmentCols = allHeaders.filter((h) => /\[\[[\s\S]*\]\]/.test(h) || h.trim().startsWith("["));
 
   // Detect choice columns (columns that ask for student choices)
   const questionHeaders = allHeaders.filter(
@@ -122,7 +135,7 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
 
   cleanRows.forEach((row, idx) => {
     let rawCode = String(row[targetCodeCol] || "").trim().replace(/\.0$/, "");
-    let studentName = codeToNameMap.get(rawCode) || rawCode;
+    let studentName = codeToNameMap.get(rawCode) || normalizeName(rawCode);
 
     if (!studentName) return;
 
@@ -144,7 +157,7 @@ export async function parseSurveyFile(file: File, roster?: Student[]): Promise<P
       // Handle comma-separated choices or single name
       const targets = rawVal
         .split(/[,;\n]/)
-        .map((t) => t.trim())
+        .map((t) => normalizeName(t))
         .filter(Boolean);
 
       choices[qHeader] = targets;
