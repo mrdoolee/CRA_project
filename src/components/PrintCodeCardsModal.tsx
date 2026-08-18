@@ -133,6 +133,15 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
           .a4-page {
             width: 194mm !important;
             height: 275mm !important;
+            /* The element also carries an inline min-height/max-height:285mm
+               (from its on-screen preview sizing) — min-height wins over a
+               plain "height", and even !important on "height" alone doesn't
+               touch these two separate properties. Left unset, the page
+               renders 285mm tall — 4mm past the 281mm printable area inside
+               the @page margins — and that excess spills onto the next
+               printed page. Override both explicitly so 275mm actually wins. */
+            min-height: 275mm !important;
+            max-height: 275mm !important;
             page-break-after: always !important;
             break-after: page !important;
             margin: 0 auto !important;
@@ -141,8 +150,16 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
             border: none !important;
             background: white !important;
             display: grid !important;
-            grid-template-columns: repeat(2, 1fr) !important;
-            grid-template-rows: repeat(5, 1fr) !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            /* minmax(0, 1fr) instead of plain 1fr: a plain 1fr track's minimum
+               is "auto", which lets a card's own content force the row (and
+               therefore this page, which has a fixed height) taller than
+               275mm — the overflow then spills onto the next printed page.
+               Capping the track minimum to 0 keeps every page exactly one
+               physical sheet; .print-card's overflow:hidden below clips any
+               card content that doesn't fit its row instead of pushing it
+               onto the next page. */
+            grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
             gap: 4mm !important;
           }
 
@@ -157,6 +174,8 @@ export const PrintCodeCardsModal: React.FC<Props> = ({
             box-shadow: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
           }
         }
         @media screen {
