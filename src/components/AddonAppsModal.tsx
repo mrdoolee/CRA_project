@@ -45,7 +45,7 @@ export const AddonAppsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               기본 자리배치는 물론, 학급 교우관계 분석 도우미(CRA)의 분석 결과를 활용하여 학급 자리배치를 구성합니다.
             </p>
             <a
-              href="https://csa-project-sigma.vercel.app/"
+              href="https://csa-trdoolee.vercel.app/"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
@@ -54,19 +54,19 @@ export const AddonAppsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </a>
           </div>
 
-          {/* 2. SGH */}
+          {/* 2. SFH */}
           <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-xl space-y-2.5">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-emerald-600 rounded-lg text-white flex-shrink-0">
                 <Users2 className="w-4 h-4" />
               </div>
-              <h4 className="font-bold text-emerald-950 text-sm">학습모둠 구성 도우미 (SGH)</h4>
+              <h4 className="font-bold text-emerald-950 text-sm">학습모둠 구성 도우미 (SFH)</h4>
             </div>
             <p className="text-emerald-900/90 leading-relaxed">
               성적 균형과 학급 교우관계 분석 도우미(CRA)의 분석 결과를 활용하여 3/4/6인 학습모둠을 구성합니다.
             </p>
             <a
-              href="https://sgh-project.vercel.app/"
+              href="https://sfh-trdoolee.vercel.app/"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
